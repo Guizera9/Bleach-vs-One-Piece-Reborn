@@ -53,7 +53,7 @@ function bvo_squall_skill_4_hit( caster, ability )
 	caster:StartGestureWithPlaybackRate(ACT_DOTA_ATTACK2, 3.0)
 
 	local break_damage = ( ( agi_multi * caster:GetAgility() ) + ( str_multi * caster:GetStrength() ) ) * ( damage_multi / 100 )
-	local targetArmor = caster.limit_break_target:GetPhysicalArmorValue()
+	local targetArmor = caster.limit_break_target:GetPhysicalArmorValue(false)
 	local damageReduction = ((0.06 * targetArmor) / (1 + 0.06 * targetArmor))
 	local damagePostReduction = break_damage * (1 - damageReduction)
 

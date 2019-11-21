@@ -628,7 +628,7 @@ function bvo_renji_skill_5_move(keys)
 					end
 					--damage
 					local damage = caster:GetStrength() * drag_str_multi / 25
-					local targetArmor = target:GetPhysicalArmorValue()
+					local targetArmor = target:GetPhysicalArmorValue(false)
 					local damageReduction = ((0.06 * targetArmor) / (1 + 0.06 * targetArmor))
 					local damagePostReduction = damage * (1 - damageReduction)
 
