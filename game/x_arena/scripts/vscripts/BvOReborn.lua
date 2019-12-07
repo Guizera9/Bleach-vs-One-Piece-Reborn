@@ -1,6 +1,7 @@
 function BvOReborn:InitGameMode()
 	print( "Loading addon..." )
 	_G._self = self
+	
     self.vUserIds = {}
     self.VoteTable = {}
     self.HeroBan = {}
@@ -14,7 +15,7 @@ function BvOReborn:InitGameMode()
 	GameRules:SetStrategyTime(15)
 	GameRules:SetPreGameTime(30)
     GameRules:SetPostGameTime(30)
-
+	
 	GameRules:SetHeroRespawnEnabled(true)
 	GameRules:SetGoldTickTime(0.25)
 	GameRules:SetTreeRegrowTime(176)
@@ -56,13 +57,14 @@ function BvOReborn:InitGameMode()
 	GameMode:SetModifyGoldFilter( 			Dynamic_Wrap( BvOReborn, "FilterGold" ), self )
 	GameMode:SetModifyExperienceFilter( 	Dynamic_Wrap( BvOReborn, "FilterExperience" ), self )
 
+	--[[
 	-- Remove TP scrolls
 	GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter(function(ctx, event)
 	    local item = EntIndexToHScript(event.item_entindex_const)
 	    if item:GetAbilityName() == "item_tpscroll" and item:GetPurchaser() == nil then return false end
 	    return true
 	end, self)
-
+	--]]
 	--Random secret hero
 	local randomSecretOn = false
 	if randomSecretOn then
@@ -79,13 +81,14 @@ function BvOReborn:InitGameMode()
 			return 0.03
 		end)
 	 end
+	
 	--Managers
 	Timers:CreateTimer(1.0, function ()
 		AbandonManager()
 		TalentManager()
 		return 1.0
 	end)
-
+	
 	--Event hooks
 	ListenToGameEvent('game_rules_state_change',		Dynamic_Wrap(BvOReborn, 'OnGameStateChange'), self)
 	ListenToGameEvent('entity_killed',					Dynamic_Wrap(BvOReborn, 'OnEntityKilled'), self)
@@ -99,7 +102,7 @@ function BvOReborn:InitGameMode()
 	ListenToGameEvent('dota_item_purchased', 			Dynamic_Wrap(BvOReborn, 'OnItemPurchase'), self)
 	--ListenToGameEvent('player_reconnected', 			Dynamic_Wrap(BvOReborn, 'OnPlayerReconnected'), self)
 	ListenToGameEvent('dota_player_used_ability', 		ApplyCooldownReduction, {} )
-
+	
 	--Register UI Listener
 	CustomGameEventManager:RegisterListener( "setting_vote", 	Dynamic_Wrap(BvOReborn, "OnSettingVote"))--gamemodes
 	CustomGameEventManager:RegisterListener( "heroban_vote", 	Dynamic_Wrap(BvOReborn, "OnHeroBanVote"))--hero ban
@@ -109,7 +112,7 @@ function BvOReborn:InitGameMode()
 	--CustomGameEventManager:RegisterListener( "vote_survey", 		Dynamic_Wrap(BvOReborn, "OnSurvey"))--survey 1
 	CustomGameEventManager:RegisterListener( "cosmetic_change", 		Dynamic_Wrap(BvOReborn, "OnCosmeticChange"))--changed cosmetic
 	CustomGameEventManager:RegisterListener( "custom_random_pick", 		Dynamic_Wrap(BvOReborn, "OnCustomRandomPick"))--clicked random button
-
+	
 	--Lua Modifiers
 	LinkLuaModifier( "modifier_stun", LUA_MODIFIER_MOTION_NONE )
 	LinkLuaModifier( "modifier_medical_tractate", LUA_MODIFIER_MOTION_NONE )
@@ -120,6 +123,7 @@ function BvOReborn:InitGameMode()
 	LinkLuaModifier( "modifier_bvohero", "modifiers/modifier_bvohero", LUA_MODIFIER_MOTION_NONE )
 
 	LinkLuaModifier( "bvo_rem_skill_2_modifier", "heroes/rem/modifiers/bvo_rem_skill_2_modifier", LUA_MODIFIER_MOTION_NONE )
+	
 	--Talents
 	LinkLuaModifier( "bvo_special_bonus_magic_resist_25_modifier", "talents/bvo_special_bonus_magic_resist_25_modifier", LUA_MODIFIER_MOTION_NONE )
 	LinkLuaModifier( "bvo_special_bonus_armor_15_modifier", "talents/bvo_special_bonus_armor_15_modifier", LUA_MODIFIER_MOTION_NONE )
@@ -206,6 +210,7 @@ function BvOReborn:InitGameMode()
 	local custom_shop_point3 = Entities:FindByName( nil, "CUSTOM_SHOP_3"):GetAbsOrigin()
 	CreateUnitByName("npc_dota_custom_shop_icon_dummy", custom_shop_point3, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	CreateUnitByName("npc_dota_custom_shop_icon_dummy", custom_shop_point3, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--Setup rapier event
 	local neutralUnits = FindUnitsInRadius(DOTA_TEAM_NEUTRALS,
                   Vector(0, 0, 0),
@@ -268,12 +273,17 @@ function BvOReborn:InitGameMode()
 	end)
 	]]
 	--Stats collection
+	--[[
 	if GameRules:IsCheatMode() or IsInToolsMode() then
 		print("Detected lobby with cheats on. No rating will be recorded.")
         IsStatsCollectionOn = false
 
         RECORD_RATING = false
 	end
+	--]]
+	
+	IsStatsCollectionOn = false
+	RECORD_RATING = false
 end
 
 function _G:SayRunePickup( player, rune, hero )
@@ -1097,6 +1107,7 @@ function BvOReborn:OnGameStateChange()
 			end)
 		end
     elseif GameRules:State_Get() == DOTA_GAMERULES_STATE_HERO_SELECTION then
+		--[[
     	if RECORD_RATING then
 	    	InitialAPILoad()
 	    else
@@ -1125,7 +1136,8 @@ function BvOReborn:OnGameStateChange()
 				end
 			end
 	    end
-
+		--]]
+		
 		local mode 	= GameRules.AddonTemplate
 		local votes = mode.VoteTable
 		--Select gamemodes based on vote
@@ -1288,6 +1300,7 @@ function BvOReborn:OnGameStateChange()
 			end
 		end
 		--send gamemode
+		--[[
 		if IsStatsCollectionOn then
 			_G.GameModeCombination = mode.creep_respawn .. "_" .. mode.win_con .. "_" .. mode.waygate .. "_" .. mode.allrandom
 			local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=4&gamemode=" .. _G.GameModeCombination
@@ -1296,6 +1309,7 @@ function BvOReborn:OnGameStateChange()
 				--callback(result.Body)
 			end)
 		end
+		--]]
 	elseif GameRules:State_Get() == DOTA_GAMERULES_STATE_CUSTOM_GAME_SETUP then
 		local mode 	= GameRules.AddonTemplate
 		if not mode.VoteTable["creep_respawn"] then mode.VoteTable["creep_respawn"] = {} end
