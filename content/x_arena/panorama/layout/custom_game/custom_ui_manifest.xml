@@ -15,9 +15,6 @@
         killCamUI.style["margin-top"] = "218px";
 
         //pick/repick
-        var randomButton = UIRoot.FindChildTraverse("RandomButton");
-        //randomButton.SetPanelEvent("onactivate", RandomHero );
-
         var repickButton = UIRoot.FindChildTraverse("RepickButton");
         repickButton.style.visibility = "collapse";
 
@@ -27,33 +24,16 @@
         //ban heroes
         var banHeroes = UIRoot.FindChildTraverse("GridCore");
 
-        //backpack
-        //newUI.FindChildTraverse("inventory").FindChildTraverse("inventory_items").FindChildTraverse("inventory_backpack_list").style.visibility = "collapse";
-
-        //startegy
+        // strategy
         var strategyUI = UIRoot.FindChildTraverse("MainContents").FindChildTraverse("ScreenContainer").FindChildTraverse("StrategyScreen").FindChildTraverse("RightContainer").FindChildTraverse("RightContainerMain");
         strategyUI.style.visibility = "collapse";
-
-        //role filter
-        var roleFilterUI = UIRoot.FindChildTraverse("MainContents").FindChildTraverse("ScreenContainer").FindChildTraverse("HeroPickScreen").FindChildTraverse("HeroPickScreenContents").FindChildTraverse("HeroPickLeftColumn").FindChildTraverse("HeroFilters").FindChildTraverse("MainFilters");
-        roleFilterUI.style.visibility = "collapse";
-
-        //hero hype description
-        var HeroPickRightColumnUI = UIRoot.FindChildTraverse("MainContents").FindChildTraverse("ScreenContainer").FindChildTraverse("HeroPickScreen").FindChildTraverse("HeroPickScreenContents").FindChildTraverse("HeroPickRightColumn");
-
-        var heroHypeUI = HeroPickRightColumnUI.FindChildTraverse("HeroInspect").FindChildTraverse("HeroHype");
-        heroHypeUI.style.visibility = "collapse";
-
+		
         //ClockLabel
         var clockLabelText = UIRoot.FindChildTraverse("ClockLabel");
 
         //DOTA minimap
         var minimapUI = UIRoot.FindChildTraverse("PreGame").FindChildTraverse("BottomPanelsContainer").FindChildTraverse("PreMinimapContainer");
         minimapUI.style.visibility = "collapse";
-
-        //Team Composition
-        var teamCompUI = UIRoot.FindChildTraverse("PreGame").FindChildTraverse("BottomPanelsContainer").FindChildTraverse("BottomPanels").FindChildTraverse("GridTeamComp");
-        teamCompUI.style.visibility = "collapse";
 
         //Current Active Quest
         var activeQuestUI = UIRoot.FindChildTraverse("PreGame").FindChildTraverse("BottomPanelsContainer").FindChildTraverse("BottomPanels").FindChildTraverse("BattlePassContainer");
@@ -62,23 +42,6 @@
         //Available Item Container
         var itemContainerUI = UIRoot.FindChildTraverse("PreGame").FindChildTraverse("BottomPanelsContainer").FindChildTraverse("AvailableItemsContainer");
         itemContainerUI.style.visibility = "collapse";
-
-        //Move chat a bit
-        var chatUI = UIRoot.FindChildTraverse("PreGame").FindChildTraverse("Chat");
-        chatUI.style["margin-right"] = "500px";
-
-        //HeroSelectionUI workaround
-        //var customHeroCosmetics = $.CreatePanel("Panel", UIRoot.FindChildTraverse("StrategyScreen").FindChildTraverse("RightContainer"), "CustomHeroCosmetics");
-        //customHeroCosmetics.BLoadLayout("file://{resources}/layout/custom_game/heroselection_honor_cosmetics.xml", false, false);
-
-        //var gameSetupOptions = $.CreatePanel("Panel", UIRoot.FindChildTraverse("PreGame"), "CustomGameSetupOptions");
-        //gameSetupOptions.BLoadLayout("file://{resources}/layout/custom_game/gamesetup_options.xml", false, false);
-
-        //var gameSetupBan = $.CreatePanel("Panel", UIRoot.FindChildTraverse("PreGame"), "CustomGameSetupBan");
-        //gameSetupBan.BLoadLayout("file://{resources}/layout/custom_game/gamesetup_heroban.xml", false, false);
-
-        //var gameSetupBody = $.CreatePanel("Panel", UIRoot.FindChildTraverse("PreGame"), "CustomGameSetupBody");
-        //gameSetupBody.BLoadLayout("file://{resources}/layout/custom_game/custom_loading_screen.xml", false, false);
 
         //Edit default team_select
         function DisableSlowPanorama()
@@ -101,19 +64,6 @@
             if (Game.GameStateIs(DOTA_GameState.DOTA_GAMERULES_STATE_CUSTOM_GAME_SETUP))
             {
                 UpdateTimer();
-                //HeroPickRightColumnUI.style.visibility = "collapse";
-
-                //gameSetupOptions.style.visibility = "visible";
-                //gameSetupBan.style.visibility = "visible";
-                //gameSetupBody.style.visibility = "visible";
-            }
-            if (Game.GameStateIs(DOTA_GameState.DOTA_GAMERULES_STATE_HERO_SELECTION))
-            {
-                //HeroPickRightColumnUI.style.visibility = "visible";
-
-                //gameSetupOptions.style.visibility = "collapse";
-                //gameSetupBan.style.visibility = "collapse";
-                //gameSetupBody.style.visibility = "collapse";
             }
         });
 
@@ -232,25 +182,14 @@
 	</script>
 
 	<Panel>
-        <!--
-		<CustomUIElement type="GameSetup" 			layoutfile="file://{resources}/layout/custom_game/team_select.xml" />
-        <CustomUIElement type="GameSetup" 			layoutfile="file://{resources}/layout/custom_game/gamesetup_options.xml" />
-		<CustomUIElement type="GameSetup" 			layoutfile="file://{resources}/layout/custom_game/gamesetup_heroban.xml" />
-
-		<CustomUIElement type="HeroSelection" 		        layoutfile="file://{resources}/layout/custom_game/heroselection_secret_heroes.xml" />--><!--delete-->
-
 		<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/custom_timer.xml" />
 		<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/medal_display.xml" />
 		<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/kill_limit_display.xml" />
-
-		<!--<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/ingame_options.xml" />--><!--delete-->
 
 		<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/shop_display.xml" />
 		<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/shop_display_2.xml" />
 
 		<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/squall_limit_break.xml" />
 		<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/kyuubi_healthbar.xml" />
-
-		<!--<CustomUIElement type="Hud" 				layoutfile="file://{resources}/layout/custom_game/survey.xml" />-->
 	</Panel>
 </root>

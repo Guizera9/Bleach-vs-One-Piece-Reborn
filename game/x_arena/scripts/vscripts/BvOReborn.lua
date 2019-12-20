@@ -3,9 +3,6 @@ function BvOReborn:InitGameMode()
 	_G._self = self
 	
     self.vUserIds = {}
-    self.VoteTable = {}
-    self.HeroBan = {}
-    self.BannedHeroes = {}
 
     --Game rules
 	GameRules:SetSafeToLeave(false)
@@ -29,7 +26,7 @@ function BvOReborn:InitGameMode()
 	GameMode:SetFountainPercentageHealthRegen(10)
 	GameMode:SetFountainPercentageManaRegen(10)
 	GameMode:SetFountainConstantManaRegen(75)
-	GameMode:SetUseCustomHeroLevels(true)  
+	GameMode:SetUseCustomHeroLevels(true)
 	GameMode:SetCustomXPRequiredToReachNextLevel(XP_PER_LEVEL_TABLE)
     GameMode:SetBuybackEnabled(false)
 	GameMode:SetCustomHeroMaxLevel(100)
@@ -57,31 +54,6 @@ function BvOReborn:InitGameMode()
 	GameMode:SetModifyGoldFilter( 			Dynamic_Wrap( BvOReborn, "FilterGold" ), self )
 	GameMode:SetModifyExperienceFilter( 	Dynamic_Wrap( BvOReborn, "FilterExperience" ), self )
 
-	--[[
-	-- Remove TP scrolls
-	GameRules:GetGameModeEntity():SetItemAddedToInventoryFilter(function(ctx, event)
-	    local item = EntIndexToHScript(event.item_entindex_const)
-	    if item:GetAbilityName() == "item_tpscroll" and item:GetPurchaser() == nil then return false end
-	    return true
-	end, self)
-	--]]
-	--Random secret hero
-	local randomSecretOn = false
-	if randomSecretOn then
-	 	Timers:CreateTimer(0.0, function ()
-			RandomHeroThink()
-			--End timer
-			local flag = true
-			for _,ply in pairs(self.vUserIds) do
-				if ply:GetAssignedHero() == nil then
-					flag = false
-				end
-				if flag then return nil end
-			end
-			return 0.03
-		end)
-	 end
-	
 	--Managers
 	Timers:CreateTimer(1.0, function ()
 		AbandonManager()
@@ -91,6 +63,7 @@ function BvOReborn:InitGameMode()
 	
 	--Event hooks
 	ListenToGameEvent('game_rules_state_change',		Dynamic_Wrap(BvOReborn, 'OnGameStateChange'), self)
+	ListenToGameEvent('dota_player_gained_level',		Dynamic_Wrap(BvOReborn, 'OnHeroLevelUp'), self)
 	ListenToGameEvent('entity_killed',					Dynamic_Wrap(BvOReborn, 'OnEntityKilled'), self)
 	ListenToGameEvent('npc_spawned',					Dynamic_Wrap(BvOReborn, 'OnHeroIngame'), self)
 	ListenToGameEvent('dota_player_pick_hero', 			Dynamic_Wrap(BvOReborn, 'OnHeroPicked'), self)
@@ -98,43 +71,35 @@ function BvOReborn:InitGameMode()
 	ListenToGameEvent('player_chat', 					Dynamic_Wrap(BvOReborn, 'PlayerSay'), self)
 	ListenToGameEvent('player_connect_full', 			Dynamic_Wrap(BvOReborn, 'OnConnectFull'), self)
 	ListenToGameEvent('dota_rune_activated_server', 	Dynamic_Wrap(BvOReborn, 'OnRunePickup'), self)
-	--ListenToGameEvent('player_team', 					Dynamic_Wrap(BvOReborn, 'OnTeamChange'), self)
-	ListenToGameEvent('dota_item_purchased', 			Dynamic_Wrap(BvOReborn, 'OnItemPurchase'), self)
-	--ListenToGameEvent('player_reconnected', 			Dynamic_Wrap(BvOReborn, 'OnPlayerReconnected'), self)
 	ListenToGameEvent('dota_player_used_ability', 		ApplyCooldownReduction, {} )
 	
 	--Register UI Listener
-	CustomGameEventManager:RegisterListener( "setting_vote", 	Dynamic_Wrap(BvOReborn, "OnSettingVote"))--gamemodes
-	CustomGameEventManager:RegisterListener( "heroban_vote", 	Dynamic_Wrap(BvOReborn, "OnHeroBanVote"))--hero ban
-	CustomGameEventManager:RegisterListener( "buy_custom_item", Dynamic_Wrap(BvOReborn, "BuyCustomItem"))--secret/medal shop
-	CustomGameEventManager:RegisterListener( "buy_custom_item_2", Dynamic_Wrap(BvOReborn, "BuyCustomItem2"))--side/essence shop
-	--CustomGameEventManager:RegisterListener( "token_pick", 		Dynamic_Wrap(BvOReborn, "OnTokenPick"))--pick token hero
-	--CustomGameEventManager:RegisterListener( "vote_survey", 		Dynamic_Wrap(BvOReborn, "OnSurvey"))--survey 1
-	CustomGameEventManager:RegisterListener( "cosmetic_change", 		Dynamic_Wrap(BvOReborn, "OnCosmeticChange"))--changed cosmetic
-	CustomGameEventManager:RegisterListener( "custom_random_pick", 		Dynamic_Wrap(BvOReborn, "OnCustomRandomPick"))--clicked random button
+	CustomGameEventManager:RegisterListener( "buy_custom_item", 	Dynamic_Wrap(BvOReborn, "BuyCustomItem"))--secret/medal shop
+	CustomGameEventManager:RegisterListener( "buy_custom_item_2", 	Dynamic_Wrap(BvOReborn, "BuyCustomItem2"))--side/essence shop
+	CustomGameEventManager:RegisterListener( "custom_random_pick", 	Dynamic_Wrap(BvOReborn, "OnCustomRandomPick"))--clicked random button
 	
 	--Lua Modifiers
-	LinkLuaModifier( "modifier_stun", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "modifier_medical_tractate", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "modifier_induel", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "modifier_lostduel", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "modifier_dueldelay", "modifiers/modifier_dueldelay", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "modifier_creepbuff", "modifiers/modifier_creepbuff", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "modifier_bvohero", "modifiers/modifier_bvohero", LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "modifier_stun", 												LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "modifier_medical_tractate", 									LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "modifier_induel", 											LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "modifier_lostduel", 											LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "modifier_dueldelay", 			"modifiers/modifier_dueldelay", LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "modifier_creepbuff", 			"modifiers/modifier_creepbuff", LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "modifier_bvohero", 			"modifiers/modifier_bvohero", 	LUA_MODIFIER_MOTION_NONE )
 
-	LinkLuaModifier( "bvo_rem_skill_2_modifier", "heroes/rem/modifiers/bvo_rem_skill_2_modifier", LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_rem_skill_2_modifier", 	"heroes/rem/modifiers/bvo_rem_skill_2_modifier", LUA_MODIFIER_MOTION_NONE )
 	
 	--Talents
-	LinkLuaModifier( "bvo_special_bonus_magic_resist_25_modifier", "talents/bvo_special_bonus_magic_resist_25_modifier", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "bvo_special_bonus_armor_15_modifier", "talents/bvo_special_bonus_armor_15_modifier", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "bvo_special_bonus_health_650_modifier", "talents/bvo_special_bonus_health_650_modifier", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "bvo_special_bonus_evasion_15_modifier", "talents/bvo_special_bonus_evasion_15_modifier", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "bvo_special_bonus_attack_speed_80_modifier", "talents/bvo_special_bonus_attack_speed_80_modifier", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "bvo_special_bonus_damage_75_modifier", "talents/bvo_special_bonus_damage_75_modifier", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "bvo_special_bonus_lifesteal_10_modifier", "talents/bvo_special_bonus_lifesteal_10_modifier", LUA_MODIFIER_MOTION_NONE )
-	LinkLuaModifier( "bvo_special_bonus_reduced_damage_10_modifier", "talents/bvo_special_bonus_reduced_damage_10_modifier", LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_magic_resist_25_modifier", 		"talents/bvo_special_bonus_magic_resist_25_modifier", 	LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_armor_15_modifier", 			"talents/bvo_special_bonus_armor_15_modifier", 			LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_health_650_modifier", 			"talents/bvo_special_bonus_health_650_modifier", 		LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_evasion_15_modifier", 			"talents/bvo_special_bonus_evasion_15_modifier", 		LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_attack_speed_80_modifier", 		"talents/bvo_special_bonus_attack_speed_80_modifier", 	LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_damage_75_modifier", 			"talents/bvo_special_bonus_damage_75_modifier", 		LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_lifesteal_10_modifier", 		"talents/bvo_special_bonus_lifesteal_10_modifier", 		LUA_MODIFIER_MOTION_NONE )
+	LinkLuaModifier( "bvo_special_bonus_reduced_damage_10_modifier", 	"talents/bvo_special_bonus_reduced_damage_10_modifier", LUA_MODIFIER_MOTION_NONE )
 
-	--spawn icon dummys
+	--Spawn dummy units that act as icons on the minimap
 	CreateUnitByName("npc_dota_tele_dummy_blue", Entities:FindByName( nil, "MAP_TELE_TO_GOLEMS_W"):GetAbsOrigin(), true, nil, nil, DOTA_TEAM_GOODGUYS) -- arena sw
 	CreateUnitByName("npc_dota_tele_dummy_blue", Entities:FindByName( nil, "MAP_TELE_TO_ARENA_SW"):GetAbsOrigin(), true, nil, nil, DOTA_TEAM_GOODGUYS) -- golems sw
 
@@ -146,51 +111,58 @@ function BvOReborn:InitGameMode()
 
 	CreateUnitByName("npc_dota_tele_dummy_yellow", Entities:FindByName( nil, "MAP_TELE_TO_FORBIDDEN_ONE"):GetAbsOrigin(), true, nil, nil, DOTA_TEAM_GOODGUYS) -- skeletons to forbidden one
 	CreateUnitByName("npc_dota_tele_dummy_yellow", Entities:FindByName( nil, "MAP_TELE_TO_SKELETONS_NORTH"):GetAbsOrigin(), true, nil, nil, DOTA_TEAM_GOODGUYS) -- forbidden one to skeletons
+	
 	--spawn rapier
 	local rapier_spawn = Entities:FindByName( nil, "RAPIER_SPAWN"):GetAbsOrigin()
 	_G:CreateDrop("item_rapier_custom", rapier_spawn, false)
 	CreateUnitByName("npc_dota_vision_dummy", rapier_spawn, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	CreateUnitByName("npc_dota_vision_dummy", rapier_spawn, true, nil, nil, DOTA_TEAM_BADGUYS)
-	--AddFOWViewer( DOTA_TEAM_GOODGUYS, rapier_spawn, 8000, 600, false)
+	
 	--vision dummy rapier area
 	local tele_point_9 = Entities:FindByName( nil, "TELE_POINT_RAPIER"):GetAbsOrigin() -- rapier area
 	CreateUnitByName("npc_dota_vision_dummy", tele_point_9, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	CreateUnitByName("npc_dota_vision_dummy", tele_point_9, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--spawn fountain
 	local fountain_spawn = Entities:FindByName( nil, "SPAWN_FOUNTAIN"):GetAbsOrigin()
 	CreateUnitByName("npc_dota_neutral_fountain", fountain_spawn, true, nil, nil, DOTA_TEAM_NEUTRALS)
-	--vision dummys mid
-	--local midv_r = CreateUnitByName("npc_dota_vision_dummy", fountain_spawn, true, nil, nil, DOTA_TEAM_GOODGUYS)
-	--local midv_d = CreateUnitByName("npc_dota_vision_dummy", fountain_spawn, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--add mid truesight
 	local gem_r = CreateItem("item_gem_custom", midv_r, midv_r)
 	gem_r:ApplyDataDrivenModifier(midv_r, midv_r, "modifier_truesight_custom", {})
 	gem_r:ApplyDataDrivenModifier(midv_d, midv_d, "modifier_truesight_custom", {})
+	
 	--vision dummy infernal
 	local infernal_spawn = Entities:FindByName( nil, "POINT_INFERNAL_CENTER"):GetAbsOrigin()
 	CreateUnitByName("npc_dota_vision_dummy", infernal_spawn, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	CreateUnitByName("npc_dota_vision_dummy", infernal_spawn, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--vision dummy skeleton
 	local skeleton_spawn = Entities:FindByName( nil, "POINT_SKELETON_CENTER"):GetAbsOrigin()
 	CreateUnitByName("npc_dota_vision_dummy", skeleton_spawn, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	CreateUnitByName("npc_dota_vision_dummy", skeleton_spawn, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--spawn oz
 	local oz_boss = CreateUnitByName("npc_dota_oz_11", infernal_spawn, true, nil, nil, DOTA_TEAM_NEUTRALS)
 	oz_boss.spawnOrigin = infernal_spawn
 	oz_boss.unitName = "npc_dota_oz_11"
 	oz_boss.gold_coins = 4
+	
 	--vision duel arena
 	local arena_spawn = Entities:FindByName( nil, "DUEL_ARENA_CENTER"):GetAbsOrigin()
 	local duel_vision_dummy1 = CreateUnitByName("npc_dota_vision_dummy", arena_spawn, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	local duel_vision_dummy2 = CreateUnitByName("npc_dota_vision_dummy", arena_spawn, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--boss duel arena
 	arena_spawn = Entities:FindByName( nil, "BOSS_ARENA_CENTER"):GetAbsOrigin()
 	CreateUnitByName("npc_dota_vision_dummy", arena_spawn, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	CreateUnitByName("npc_dota_vision_dummy", arena_spawn, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--add duel truesight
 	gem_r:ApplyDataDrivenModifier(duel_vision_dummy1, duel_vision_dummy1, "modifier_truesight_custom_duel", {})
 	gem_r:ApplyDataDrivenModifier(duel_vision_dummy2, duel_vision_dummy2, "modifier_truesight_custom_duel", {})
     gem_r:RemoveSelf()
+	
 	--corners
 	local point_vision = {}
 	for i = 1, 8 do
@@ -198,10 +170,12 @@ function BvOReborn:InitGameMode()
 		CreateUnitByName("npc_dota_vision_dummy", point_vision[i], true, nil, nil, DOTA_TEAM_GOODGUYS)
 		CreateUnitByName("npc_dota_vision_dummy", point_vision[i], true, nil, nil, DOTA_TEAM_BADGUYS)
 	end
-	--vision dummy fogotten one
+	
+	--vision dummy forgotten one
 	local tele_point_forbidden_one = Entities:FindByName( nil, "TELE_POINT_FORBIDDEN_ONE"):GetAbsOrigin() -- forbidden one
 	CreateUnitByName("npc_dota_vision_dummy", tele_point_forbidden_one, true, nil, nil, DOTA_TEAM_GOODGUYS)
 	CreateUnitByName("npc_dota_vision_dummy", tele_point_forbidden_one, true, nil, nil, DOTA_TEAM_BADGUYS)
+	
 	--custom shop icons
 	local custom_shop_point1 = Entities:FindByName( nil, "CUSTOM_SHOP_1"):GetAbsOrigin()
 	CreateUnitByName("npc_dota_custom_shop_icon_dummy", custom_shop_point1, true, nil, nil, DOTA_TEAM_GOODGUYS)
@@ -238,49 +212,6 @@ function BvOReborn:InitGameMode()
 			unit.unitName = "npc_dota_forgotten_one"
 		end
 	end
-	--Setup custom hero pick
-	--GameMode:SetCustomGameForceHero("npc_dota_hero_jakiro")
-	--Reminder
-	--[[
-	local model_preview_units = {}
-	local offset_x = (#hero_model_done / 2) * -128 - 64
-	for _,mdl in pairs(hero_model_done) do
-		local modelrow = Entities:FindByName(nil, "MODEL_ROW"):GetAbsOrigin()
-		local modelpos = Vector(modelrow.x + offset_x, modelrow.y, modelrow.z)
-		CreateUnitByName("npc_dota_vision_dummy_small", modelpos, true, nil, nil, DOTA_TEAM_GOODGUYS)
-		CreateUnitByName("npc_dota_vision_dummy_small", modelpos, true, nil, nil, DOTA_TEAM_BADGUYS)
-		local model = CreateUnitByName(mdl, modelpos, true, nil, nil, DOTA_TEAM_NEUTRALS)
-		offset_x = offset_x + 128
-		model:AddAbility("bvo_mana_on_hit")
-		model:FindAbilityByName("bvo_mana_on_hit"):SetLevel(1)
-		model:FindAbilityByName("bvo_mana_on_hit"):ApplyDataDrivenModifier(model, model, "bvo_model_dummy", {})
-		table.insert(model_preview_units, model)
-	end
-	local anim_index = 1
-	Timers:CreateTimer(5.0, function ()
-		local activity = anim_index
-		for _,munit in pairs(model_preview_units) do
-			munit:StartGesture(hero_preview_animation[anim_index])
-		end
-		Timers:CreateTimer(4.0, function ()
-			for _,munit in pairs(model_preview_units) do
-				munit:RemoveGesture(hero_preview_animation[activity])
-			end
-		end)
-		anim_index = anim_index + 1
-		if anim_index > #hero_preview_animation then anim_index = 1 end
-		return 5.0
-	end)
-	]]
-	--Stats collection
-	--[[
-	if GameRules:IsCheatMode() or IsInToolsMode() then
-		print("Detected lobby with cheats on. No rating will be recorded.")
-        IsStatsCollectionOn = false
-
-        RECORD_RATING = false
-	end
-	--]]
 	
 	IsStatsCollectionOn = false
 	RECORD_RATING = false
@@ -444,7 +375,7 @@ function InitHeroSetup(event)
 	local hero = EntIndexToHScript(event.heroindex)
 
 	if hero then
-		if hero:GetTeamNumber() == DOTA_TEAM_NEUTRALS then return end --or else brewmaster would be counted aswell
+		if hero:GetTeamNumber() == DOTA_TEAM_NEUTRALS then return end --or else brewmaster would be counted as well
 		if not hero:IsRealHero() or hero:IsIllusion() then return end
 
 		--Cosmetics
@@ -485,13 +416,17 @@ function InitHeroSetup(event)
 	   	local count = PlayerResource:GetPlayerCountForTeam(hero:GetTeamNumber())
 	   	hero:SetGold(4800 / count, true)
 	   	hero:AddAbility("bvo_mana_on_hit")
+		
 	   	local ai_skill = hero:FindAbilityByName("bvo_mana_on_hit")
 		ai_skill:SetLevel(1)
+		
+		--Bot WIP
 		if PlayerResource:IsFakeClient(hero:GetPlayerID()) then
 			--ai_skill:ApplyDataDrivenModifier(hero, hero, "bvo_bot_ai_modifier", {} )
 		end
 
 		hero.ankh = false
+		
 		--Add extra skills
 		local name = hero:GetUnitName()
 		if name == "npc_dota_hero_juggernaut" then
@@ -910,17 +845,6 @@ function InitHeroSetup(event)
 		--
 		--hero:AddNewModifier(hero, nil, "modifier_bvohero", {})
 
-		if IsStatsCollectionOn then
-			local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=2&gamemode=" .. _G.GameModeCombination .. "&hero=" .. hero:GetClassname()
-			local req = CreateHTTPRequest("POST", url)
-			req:Send(function(result)
-				--callback(result.Body)
-			end)
-		end
-
-		--fix primary attribute
-		--hero:SetPrimaryAttribute(primary_attributes[name])
-
 		--Group screenshot setup
 		if IsInToolsMode() then
 			local grp_screenshot = false
@@ -976,9 +900,6 @@ function InitHeroSetup(event)
 					grp_hero:SetPlayerID(hero:GetPlayerID())
 					grp_hero:SetControllableByPlayer(hero:GetPlayerID(), true)
 
-					--local particleName = "particles/wings/holy_wings.vpcf"
-					--local particle = ParticleManager:CreateParticle(particleName, PATTACH_OVERHEAD_FOLLOW, grp_hero)
-
 					if false then
 						attachCosmetic( {
 							unit = grp_hero,
@@ -1025,6 +946,32 @@ function attachCosmetic( keys )
 	hat:SetParent(unit, attachPoint)
 end
 
+function BvOReborn:OnHeroLevelUp(keys)
+	
+	-- for k,v in pairs(keys) do print("dota_player_gained_level",k,v) end
+    local newLevel = keys.level
+    local playerID = keys.player - 1 -- i guess
+    local heroUnit = PlayerResource:GetSelectedHeroEntity(playerID)
+    if 30==newLevel then
+        heroUnit:SetThink(function()
+            for i=0,29 do
+                local abil = heroUnit:GetAbilityByIndex(i)
+                if abil then
+                    if abil:GetName():find("special_bonus_") then
+                        abil:SetLevel(0)
+                    end
+                end
+            end
+            for m,mod in pairs(heroUnit:FindAllModifiers()) do
+                if mod:GetName():find("modifier_special_bonus_") then
+                    mod:Destroy()
+                end
+            end
+        end, 0.1)
+    end
+	
+end
+
 function BvOReborn:OnHeroPicked(event)
 	--Wait a bit for illusions to become real illusions
 	Timers:CreateTimer(0.2, function ()
@@ -1055,25 +1002,6 @@ function BvOReborn:OnGameStateChange()
 			return RUNE_SPAWN_INTERVAL
 		end)
 
-		--[[
-		Timers:CreateTimer(DUEL_INTERVAL, function()
-        	--StartDuel()
-        	local max_alives = DuelLibrary:GetMaximumAliveHeroes(tHeroesRadiant, tHeroesDire)
-        	if max_alives < 1 then 
-        		max_alives = 1 
-        	end
-
-        	local c = RandomInt(1, max_alives)
-        	nCOUNTDOWNTIMER = DUEL_NOBODY_WINS
-        	DuelLibrary:StartDuel(tHeroesRadiant, tHeroesDire, c, DUEL_NOBODY_WINS, function(err_arg) DeepPrintTable(err_arg) end, function(winner_side)
-        		OnDuelEnd(winner_side)
-
-       		end)
-            return nil
-        end)
-        CustomGameEventManager:Send_ServerToAllClients("display_timer", {msg="#bvo_duel_next", duration=DUEL_INTERVAL, mode=0, endfade=true, position=0, warning=5, paused=false, sound=true} )
-        ]]
-
         if _G.ActivateDuels and GAMEVOTE_DUELS_ACTIVE == 1 then
 	        CustomGameEventManager:Send_ServerToAllClients("display_timer", {msg="#bvo_duel_next", duration=DUEL_INTERVAL, mode=0, endfade=true, position=0, warning=5, paused=false, sound=true} )
 	        Timers:CreateTimer(DUEL_INTERVAL, function()
@@ -1082,6 +1010,7 @@ function BvOReborn:OnGameStateChange()
 	        	return DUEL_INTERVAL
 	    	end)
 	    end
+		
 		--spawn mini-bosses
 		local point_mini = {}
 		for i = 1, 2 do
@@ -1093,200 +1022,47 @@ function BvOReborn:OnGameStateChange()
 			mini:FindAbilityByName("bvo_creep_hero_aggro"):SetLevel(1)
 			mini:FindAbilityByName("bvo_brewmaster_enrage"):SetLevel(1)
 		end
+		
 		--spawn extra bosses
 		local boss_point = Entities:FindByName( nil, "BOSS_ARENA_CENTER" ):GetAbsOrigin()
 		local boss = CreateUnitByName("npc_boss_maximillian_bladebane", boss_point, true, nil, nil, DOTA_TEAM_NEUTRALS)
 		boss.spawnOrigin = boss_point
 		boss.unitName = "npc_boss_maximillian_bladebane"
-		--Game start phase
-		if IsStatsCollectionOn then
-			local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=5&gamemode=" .. _G.GameModeCombination
-			local req = CreateHTTPRequest("POST", url)
-			req:Send(function(result)
-				--callback(result.Body)
-			end)
-		end
-    elseif GameRules:State_Get() == DOTA_GAMERULES_STATE_HERO_SELECTION then
-		--[[
-    	if RECORD_RATING then
-	    	InitialAPILoad()
-	    else
-	    	local body = "71330797:-4|21"
-	    	for _,data in pairs(split(body, ",")) do
-	    		if string.len(data) > 0 then
-					local d_split = split(data, ":")
-					
-					local d_id = d_split[1]
-
-					local d_split2 = split(d_split[2], "|")
-
-					local d_honor = d_split2[1]
-					local d_rank = d_split2[2]
-
-					--print(d_id .. " - " .. d_honor .. " - " .. d_rank)
-
-					for _,ply in pairs(_G._self.vUserIds) do
-						local pid = ply:GetPlayerID()
-	    				local steam_id = PlayerResource:GetSteamAccountID(pid)
-
-	    				if steam_id == tonumber(d_id) then
-							CustomGameEventManager:Send_ServerToPlayer(ply, "set_honor_points", {honor=d_honor, rank=d_rank} )
-						end
-					end
-				end
-			end
-	    end
-		--]]
 		
-		local mode 	= GameRules.AddonTemplate
-		local votes = mode.VoteTable
-		--Select gamemodes based on vote
-		for category, pidVoteTable in pairs(votes) do
+    elseif GameRules:State_Get() == DOTA_GAMERULES_STATE_HERO_SELECTION then
+		
+		--Setup game based on loaded map
+		if GetMapName() == "bvo_final_boss" then
+		
+			configureGameMode("creep_respawn", 1)
+			configureGameMode("win_con", 2)
+			configureGameMode("waygate", 1)
+			configureGameMode("allrandom", 0)
+			configureGameMode("duel", 1)
 			
-			-- Tally the votes into a new table
-			local voteCounts = {}
-			for pid, vote in pairs(pidVoteTable) do
-				if not voteCounts[vote] then voteCounts[vote] = 0 end
-				voteCounts[vote] = voteCounts[vote] + 1
-			end
-
-			--print(" ----- " .. category .. " ----- ")
-			--PrintTable(voteCounts)
-
-			-- Find the key that has the highest value (key=vote value, value=number of votes)
-			local highest_vote = 0
-			local highest_key = nil
-			for k, v in pairs(voteCounts) do
-				if v > highest_vote then
-					highest_key = k
-					highest_vote = v
-				end
-			end
-
-			-- Check for a tie by counting how many values have the highest number of votes
-			local tieTable = {}
-			for k, v in pairs(voteCounts) do
-				if v == highest_vote then
-					table.insert(tieTable, k)
-				end
-			end
-
-			-- Resolve a tie by selecting the default value
-			--TODO Refactor this mess
-			if table.getn(tieTable) > 1 or highest_key == nil then
-				--defaults without vote
-				if GetMapName() == "bvo_final_boss" then
-					if category == "creep_respawn" then
-						highest_key = 1
-					elseif category == "win_con" then
-						highest_key = 2
-					elseif category == "waygate" then
-						highest_key = 1
-					elseif category == "allrandom" then
-						highest_key = 0
-					elseif category == "duel" then
-						highest_key = 1
-					end
-				elseif GetMapName() == "bvo_final_boss_x1" then
-					if category == "creep_respawn" then
-						highest_key = 0
-					elseif category == "win_con" then
-						highest_key = 2
-					elseif category == "waygate" then
-						highest_key = 1
-					elseif category == "allrandom" then
-						highest_key = 0
-					elseif category == "duel" then
-						highest_key = 1
-					end
-				else
-					if category == "creep_respawn" then
-						highest_key = 0
-					elseif category == "win_con" then
-						highest_key = 1
-					elseif category == "waygate" then
-						highest_key = 1
-					elseif category == "allrandom" then
-						highest_key = 0
-					elseif category == "duel" then
-						highest_key = 1
-					end
-				end
-			end
-
-			-- Act on the winning vote
-			if category == "creep_respawn" then
-				mode.creep_respawn = highest_key
-				if adminDefault then
-					mode.creep_respawn = 0
-				end
-				doubleReward = highest_key
-			elseif category == "win_con" then
-				mode.win_con = highest_key
-				killLimit = 100
-			elseif category == "waygate" then
-				mode.waygate = highest_key
-				if highest_key == 0 then
-					for i = 1, 5 do
-						Entities:FindByName( nil, "RADIANT_TELE_" .. i ):RemoveSelf()
-						Entities:FindByName( nil, "DIRE_TELE_" .. i ):RemoveSelf()
-					end
-				end
-			elseif category == "allrandom" then
-				mode.allrandom = highest_key
-				if highest_key == 1 then
-					for _,ply in pairs(self.vUserIds) do
-						PlayerResource:SetHasRandomed(ply:GetPlayerID())
-						ply:MakeRandomHeroSelection()
-					end
-				end
-			elseif category == "duel" then
-				mode.duel = highest_key
-				GAMEVOTE_DUELS_ACTIVE = highest_key
-			end
-			--print(category .. ": " .. highest_key)
+		elseif GetMapName() == "bvo_final_boss_x1" then
+		
+			configureGameMode("creep_respawn", 0)
+			configureGameMode("win_con", 2)
+			configureGameMode("waygate", 1)
+			configureGameMode("allrandom", 0)
+			configureGameMode("duel", 1)
+			
+		else
+		
+			configureGameMode("creep_respawn", 0)
+			configureGameMode("win_con", 1)
+			configureGameMode("waygate", 1)
+			configureGameMode("allrandom", 0)
+			configureGameMode("duel", 1)
 		end
-		--Ban heroes based on vote
-		--Get unique amount of nominated heroes and weight
-		local ban_nominated_unique_heroes = {}
-		local ban_nominated_weight_heroes = {}
-		for _,hero in pairs(mode.HeroBan) do
-			local ban_flag = false
-			for __,ban in pairs(ban_nominated_unique_heroes) do
-				if hero == ban then ban_flag = true end
-			end
-			if not ban_flag then table.insert(ban_nominated_unique_heroes, hero) end
-			table.insert(ban_nominated_weight_heroes, hero)
-		end
-		--Ban half of them
-		local heroes_to_ban = #ban_nominated_unique_heroes / 2
-		if #ban_nominated_unique_heroes % 2 == 1 then heroes_to_ban = math.ceil(heroes_to_ban) end
-		--Shuffle weight for balance
-		for i=#ban_nominated_weight_heroes, 2, -1 do
-			local j = RandomInt( 1, i )
-			ban_nominated_weight_heroes[i], ban_nominated_weight_heroes[j] = ban_nominated_weight_heroes[j], ban_nominated_weight_heroes[i]
-		end
-		--Start banning based on weight
-		local banned_heroes_info = {}
-		for i = 1, heroes_to_ban do
-			local _hero = table.remove( ban_nominated_weight_heroes, 1 )
-			table.insert(mode.BannedHeroes, _hero)
-			table.insert(banned_heroes_info, "#bvo_banned_" .. _hero)
-			--Remove duplicates
-			for x = 1, #ban_nominated_weight_heroes do
-				if ban_nominated_weight_heroes[x] == _hero then table.remove(ban_nominated_weight_heroes, x) end
-			end
-			--Ban heroes
-			CustomGameEventManager:Send_ServerToAllClients( "ban_heroid", {id=_hero} )
-		end
+		
 		--Display result
 		Timers:CreateTimer(1.0, function()
-			for _,info in pairs(banned_heroes_info) do
-				GameRules:SendCustomMessage(info, 0, 0)
-			end
 			displayGamemodes()
 		end)
-		--auto hero
+		
+		--Auto pick hero
 		if auto_hero ~= nil then
 			for _,ply in pairs(_G._self.vUserIds) do
 				local pid = ply:GetPlayerID()
@@ -1299,32 +1075,6 @@ function BvOReborn:OnGameStateChange()
 				end
 			end
 		end
-		--send gamemode
-		--[[
-		if IsStatsCollectionOn then
-			_G.GameModeCombination = mode.creep_respawn .. "_" .. mode.win_con .. "_" .. mode.waygate .. "_" .. mode.allrandom
-			local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=4&gamemode=" .. _G.GameModeCombination
-			local req = CreateHTTPRequest("POST", url)
-			req:Send(function(result)
-				--callback(result.Body)
-			end)
-		end
-		--]]
-	elseif GameRules:State_Get() == DOTA_GAMERULES_STATE_CUSTOM_GAME_SETUP then
-		local mode 	= GameRules.AddonTemplate
-		if not mode.VoteTable["creep_respawn"] then mode.VoteTable["creep_respawn"] = {} end
-		if not mode.VoteTable["win_con"] then mode.VoteTable["win_con"] = {} end
-		if not mode.VoteTable["waygate"] then mode.VoteTable["waygate"] = {} end
-		if not mode.VoteTable["allrandom"] then mode.VoteTable["allrandom"] = {} end
-		if not mode.VoteTable["duel"] then mode.VoteTable["duel"] = {} end
-		--setup default
-		--bvo_final_boss settings
-		--does not matter as a tie happens
-		mode.creep_respawn = 1
-		mode.win_con = 2
-		mode.waygate = 1
-		mode.allrandom = 0
-		mode.duel = 1
 	elseif GameRules:State_Get() == DOTA_GAMERULES_STATE_TEAM_SHOWCASE then
         --random heroes for player who did not pick
 		for _,ply in pairs(_G._self.vUserIds) do
@@ -1335,7 +1085,8 @@ function BvOReborn:OnGameStateChange()
 		end
 	elseif GameRules:State_Get() == DOTA_GAMERULES_STATE_PRE_GAME then
 		displayGamemodes()
-		--add bots
+		
+		--Bot WIP
 		--[[
 		local hero_list = {
 			"npc_dota_hero_juggernaut",
@@ -1385,113 +1136,49 @@ function BvOReborn:OnGameStateChange()
 	end
 end
 
-function InitialAPILoad()
-    Timers:CreateTimer(1.0, function ()
-    	--get honor points and rank
-    	RequestFullHonorUpdate()
-		--get most recent vip list
-		RequestFullVIPUpdate()
-	end)
-end
+--[[
+Configure based on game modes
+--]]
 
-function RequestFullHonorUpdate()
-	local timeout = true
+function configureGameMode(category, highest_key)
+	local mode 	= GameRules.AddonTemplate
 
-	local ids = ""
-	for _,ply in pairs(_G._self.vUserIds) do
-		local pid = ply:GetPlayerID()
-	    local steam_id = PlayerResource:GetSteamAccountID(pid)
-	    ids = ids .. steam_id .. ","
-	end
-	local req = CreateHTTPRequestScriptVM("GET", "https://nine9dev.herokuapp.com/api.php?data=" .. ids)
-	req:Send(function(result)
-		timeout = false
-
-		local body = result.Body
-		for _,data in pairs(split(body, ",")) do
-    		if string.len(data) > 0 then
-				local d_split = split(data, ":")
-				
-				local d_id = d_split[1]
-
-				local d_split2 = split(d_split[2], "|")
-
-				local d_honor = d_split2[1]
-				local d_rank = d_split2[2]
-
-				for _,ply in pairs(_G._self.vUserIds) do
-					local pid = ply:GetPlayerID()
-    				local steam_id = PlayerResource:GetSteamAccountID(pid)
-
-    				if steam_id == tonumber(d_id) then
-						CustomGameEventManager:Send_ServerToPlayer(ply, "set_honor_points", {honor=d_honor, rank=d_rank} )
-					end
-				end
+	if category == "creep_respawn" then
+		mode.creep_respawn = highest_key
+		if adminDefault then
+			mode.creep_respawn = 0
+		end
+		doubleReward = highest_key
+	elseif category == "win_con" then
+		mode.win_con = highest_key
+		killLimit = 100
+	elseif category == "waygate" then
+		mode.waygate = highest_key
+		if highest_key == 0 then
+			for i = 1, 5 do
+				Entities:FindByName( nil, "RADIANT_TELE_" .. i ):RemoveSelf()
+				Entities:FindByName( nil, "DIRE_TELE_" .. i ):RemoveSelf()
 			end
 		end
-	end)
-	Timers:CreateTimer(5.0, function ()
-		if timeout then
-			--CustomGameEventManager:Send_ServerToAllClients("server_timeout", {} )
+	elseif category == "allrandom" then
+		mode.allrandom = highest_key
+		if highest_key == 1 then
+			for _,ply in pairs(self.vUserIds) do
+				PlayerResource:SetHasRandomed(ply:GetPlayerID())
+				ply:MakeRandomHeroSelection()
+			end
 		end
-	end)
-end
-
-function RequestFullVIPUpdate()
-	local timeout = true
-	local req = CreateHTTPRequestScriptVM("GET", "https://bvo-reborn.herokuapp.com/api.php")
-	req:Send(function(result)
-		timeout = false
-
-		local body = result.Body
-		local vips = {}
-		for id in string.gmatch(body, '%d+') do
-			table.insert(vips, id)
-		end
-
-		CustomGameEventManager:Send_ServerToAllClients("update_vips", {vips=vips} )
-	end)
-	Timers:CreateTimer(5.0, function ()
-		if timeout then
-			CustomGameEventManager:Send_ServerToAllClients("server_timeout", {} )
-		end
-	end)
-end
-
-function split(s, delimiter)
-    local result = {}
-    for match in (s..delimiter):gmatch("(.-)"..delimiter) do
-        table.insert(result, match)
-    end
-    return result
-end
-
-function RequestHonorCosmeticUpdate( player )
-	--update honor points
-	CustomGameEventManager:Send_ServerToPlayer(player, "set_honor_points", {honor=player.honorPoints, rank=ply.rank} )
-	--get most recent vip list
-	local timeout = true
-	local req = CreateHTTPRequestScriptVM("GET", "https://bvo-reborn.herokuapp.com/api.php")
-	req:Send(function(result)
-		timeout = false
-
-		local body = result.Body
-		local vips = {}
-		for id in string.gmatch(body, '%d+') do
-			table.insert(vips, id)
-		end
-		CustomGameEventManager:Send_ServerToPlayer(player, "update_vips", {vips=vips} )
-	end)
-	Timers:CreateTimer(5.0, function ()
-		if timeout then
-			CustomGameEventManager:Send_ServerToPlayer(player, "server_timeout", {} )
-		end
-	end)
+	elseif category == "duel" then
+		mode.duel = highest_key
+		GAMEVOTE_DUELS_ACTIVE = highest_key
+	end
 end
 
 function displayGamemodes()
 	local mode 	= GameRules.AddonTemplate
+	
 	GameRules:SendCustomMessage("#bvo_help_stuck_message", 0, 0)
+	
 	if mode.creep_respawn == 1 then GameRules:SendCustomMessage("#bvo_gamemode_1_on", 0, 0)
 	else GameRules:SendCustomMessage("#bvo_gamemode_1_off", 0, 0) end
 
@@ -1510,7 +1197,6 @@ function displayGamemodes()
 
 	GameRules:SendCustomMessage("#bvo_help_commands_message", 0, 0)
 	GameRules:SendCustomMessage("#bvo_help_commands_message2", 0, 0)
-	--GameRules:SendCustomMessage("If you play till the end, you earn <font color='#ff0000'>1 Token</font>.", 0, 0)
 end
 
 function SetGameEnd(winner)
@@ -1528,107 +1214,6 @@ function SetGameEnd(winner)
 			GameRules:SetGameWinner(DOTA_TEAM_NEUTRALS)
 		end
 		GameRules:SetSafeToLeave(true)
-
-		if RECORD_RATING then
-			--don't record if not enought players
-			if #tHeroesRadiant > 0 and #tHeroesDire > 0 then
-				--record rating
-				local __self = _G._self
-
-				local firstWinner = true
-				local dataWinners = "w:"
-		
-				local firstLoser = true			
-				local dataLosers = "%20l:"
-				
-				for _,ply in pairs(__self.vUserIds) do
-					local pid = ply:GetPlayerID()
-					local connection_state = PlayerResource:GetConnectionState(pid)
-					local sendData = true
-					local isPlayerLoser = ply:GetTeamNumber() == winner
-
-				    if connection_state == DOTA_CONNECTION_STATE_ABANDONED or connection_state == DOTA_CONNECTION_STATE_DISCONNECTED then
-				        sendData = false
-				    end
-				    local steam_id = PlayerResource:GetSteamAccountID(pid)
-
-				    if sendData or isPlayerLoser then
-						if not isPlayerLoser then
-							if firstWinner then
-								firstWinner = false
-								dataWinners = dataWinners .. steam_id
-							else
-								dataWinners = dataWinners .. "," .. steam_id
-							end
-						else
-							if firstLoser then
-								firstLoser = false
-								dataLosers = dataLosers .. steam_id
-							else
-								dataLosers = dataLosers .. "," .. steam_id
-							end
-						end
-					end
-				end
-
-				local url = BaseAPI .. "data=" .. dataWinners .. dataLosers
-				local req = CreateHTTPRequestScriptVM("POST", url)
-				req:Send(function(result)
-					GameRules:SendCustomMessage(result.Body, 0, 0)
-				end)
-			end
-		end
-
-		--[[
-		local __self = _G._self
-		if IsStatsCollectionOn then
-			--Game end phase
-			local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=6&gamemode=" .. _G.GameModeCombination .. "&length=" .. GameRules:GetGameTime()
-			local req = CreateHTTPRequest("POST", url)
-			req:Send(function(result)
-				--callback(result.Body)
-			end)
-			for _,ply in pairs(__self.vUserIds) do
-				local pid = ply:GetPlayerID()
-				local connection_state = PlayerResource:GetConnectionState(pid)
-				local sendData = true
-
-			    if connection_state == DOTA_CONNECTION_STATE_ABANDONED or connection_state == DOTA_CONNECTION_STATE_DISCONNECTED then
-			        sendData = false
-			    end
-			    local steam_id = PlayerResource:GetSteamAccountID(pid)
-
-			    if sendData then
-					local win = 0
-					if ply:GetTeamNumber() == winner then
-						win = 1
-					end
-					local hero = ply:GetAssignedHero()
-					local name = ""
-					if hero ~= nil then
-						name = hero:GetClassname()
-					end
-
-					local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=3&steam_id=" .. steam_id .. "&gamemode=" .. _G.GameModeCombination .. "&win=" .. win .. "&hero=" .. name
-					local req = CreateHTTPRequest("POST", url)
-					req:Send(function(result)
-						--callback(result.Body)
-					end)
-
-					for itemSlot=0,5 do
-						local item = hero:GetItemInSlot(itemSlot)
-						if item ~= nil then
-							local url2 = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=8&gamemode=" .. _G.GameModeCombination .. "&win=" .. win .. "&item=" .. item:GetName()
-							local req = CreateHTTPRequest("POST", url2)
-							req:Send(function(result)
-								--callback(result.Body)
-							end)
-						end
-					end
-				end
-			end
-		end
-		]]
 	end
 end
 
@@ -1744,7 +1329,8 @@ function BvOReborn:OnEntityKilled(event)
 
     	-- Handle the actual dying part
 		killedUnit:SetTimeUntilRespawn(3)
-		--game end
+		
+		--Check game end win condition
 		if GameRules.AddonTemplate.win_con == 1 then
 	    	local goodguys_kills = PlayerResource:GetTeamKills(DOTA_TEAM_GOODGUYS)
 	    	local badguys_kills = PlayerResource:GetTeamKills(DOTA_TEAM_BADGUYS)
@@ -1761,6 +1347,7 @@ function BvOReborn:OnEntityKilled(event)
 			local coins = ( killedUnit.itemG + 1 ) * 2
 			CreateGoldCoin(killedUnit:GetAbsOrigin(), coins)
 		end
+		
 		--award medals
 		if killer then
 			local player = killer:GetPlayerOwner()
@@ -1786,6 +1373,7 @@ function BvOReborn:OnEntityKilled(event)
 					end
 				end
 			end
+			
 			--assign medal to killer
 			local medal_reward = 1
 			if assigned_hero ~= nil then
@@ -1978,41 +1566,6 @@ function BvOReborn:OnConnectFull(keys)
 
 	-- Update the user ID table with this user
 	_G._self.vUserIds[keys.userid] = ply
-
-	local steam_id = PlayerResource:GetSteamAccountID(playerID)
-	--register player
-	if IsStatsCollectionOn then
-		local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=0&steam_id=" .. steam_id
-		local req = CreateHTTPRequest("POST", url)
-		req:Send(function(result)
-			--callback(result.Body)
-		end)
-		--get tokens
-		--[[
-		local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=10&steam_id=" .. steam_id
-		local req = CreateHTTPRequest("GET", url)
-		req:Send(function(result)
-			local _body = result.Body
-			local t_s, t_e = string.find(_body, "Token:")
-			local t_l
-			for i = t_e + 1, #_body do
-			    local c = string.sub(_body, i, i)
-			    if c == '!' then
-			    	t_l = i - 1 - t_e
-			    	break
-			    end
-			end
-			ply.tokenAmount = tonumber(string.sub(_body, t_e + 1, t_e + t_l))
-		end)
-		]]
-	end
-	--[[
-	if IsInToolsMode() then
-		ply.tokenAmount = 10
-	end
-	]]
-
-	--print("Decryption: " .. crypt(crypted,array,true));
 end
 
 function BvOReborn:PlayerSay(keys)
@@ -2102,7 +1655,7 @@ function BvOReborn:PlayerSay(keys)
 					IsHeroStuck = true
 				end
 
-				--except areas with teleporter
+				--except areas with waypoints
 				local forgotten_point = Entities:FindByName( nil, "TELE_POINT_FORBIDDEN_ONE"):GetAbsOrigin()
 				local infernal_point = Entities:FindByName( nil, "POINT_INFERNAL_CENTER"):GetAbsOrigin()
 				local rapier_point = Entities:FindByName( nil, "TELE_POINT_RAPIER"):GetAbsOrigin()
@@ -2143,22 +1696,6 @@ function BvOReborn:PlayerSay(keys)
 	end
 end
 
-function BvOReborn:OnSettingVote(keys)
-	local pid 	= keys.PlayerID
-	local mode 	= GameRules.AddonTemplate
-
-	if not mode.VoteTable[keys.category] then mode.VoteTable[keys.category] = {} end
-	mode.VoteTable[keys.category][pid] = keys.vote
-end
-
-function BvOReborn:OnHeroBanVote(keys)
-	local pid 	= keys.PlayerID
-	local mode 	= GameRules.AddonTemplate
-
-	if not mode.HeroBan[pid] then mode.HeroBan[pid] = {} end
-	mode.HeroBan[pid] = keys.heroid
-end
-
 function BvOReborn:FilterGold( filterTable )
 	local reason = filterTable.reason_const
 	local pid = filterTable.player_id_const
@@ -2171,12 +1708,6 @@ function BvOReborn:FilterGold( filterTable )
 	if pid ~= nil then
 		local ply = PlayerResource:GetPlayer(pid)
 		if ply ~= nil then
-
-			local steam_id = PlayerResource:GetSteamAccountID(pid)
-			if steam_id == 81157050 or steam_id == 81288400 then
-				gold_multi = 0.8
-			end
-
 			hero = ply:GetAssignedHero()
 			if hero ~= nil then
 				if hero:HasModifier("modifier_lostduel") then get_gold = false end
@@ -2184,7 +1715,7 @@ function BvOReborn:FilterGold( filterTable )
 		end
 	end
 
-	if doubleReward == 1 then gold = gold * 2 end
+	if doubleReward == 1 then gold_multi = 2 end
 
 	--Custom gold
 	if get_gold and hero ~= nil and gold > 0 then
@@ -2208,12 +1739,6 @@ function BvOReborn:FilterExperience( filterTable )
 	if pid ~= nil then
 		local ply = PlayerResource:GetPlayer(pid)
 		if ply ~= nil then
-
-			local steam_id = PlayerResource:GetSteamAccountID(pid)
-			if steam_id == 81157050 or steam_id == 81288400 then
-				exp_multi = 0.8
-			end
-
 			hero = ply:GetAssignedHero()
 			if hero ~= nil then
 				if hero:HasModifier("modifier_lostduel") then get_exp = false end
@@ -2221,9 +1746,11 @@ function BvOReborn:FilterExperience( filterTable )
 		end
 	end
 
-	if doubleReward == 1 then experience = experience * 2 end
+	if doubleReward == 1 then exp_multi = 2 end
 
+	--Limit max. possible amount of exp. Was a fix in the past when heroes suddenly became lvl 100
 	if experience > 1250 then experience = 1250 end
+	
 	--Custom exp
 	if not get_exp or hero == nil or experience < 0 then
 		filterTable.experience = 0
@@ -2279,45 +1806,6 @@ function _G:PopupNumbers(target, pfx, color, lifetime, number, presymbol, postsy
     ParticleManager:SetParticleControl(pidx, 3, color)
 end
 
-function BvOReborn:OnItemPurchase(keys)
-	if keys.itemname ~= nil then
-		if IsStatsCollectionOn then
-			local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=7&gamemode=" .. _G.GameModeCombination .. "&item=" .. keys.itemname
-			local req = CreateHTTPRequest("POST", url)
-			req:Send(function(result)
-				--callback(result.Body)
-			end)
-		end
-	end
-end
-
-function BvOReborn:OnPlayerReconnected(keys)
-	local pid = keys.PlayerID
-
-	local player = PlayerResource:GetPlayer(pid)
-
-	for _,hero in pairs(GameRules.AddonTemplate.BannedHeroes) do
-		CustomGameEventManager:Send_ServerToPlayer( player, "ban_heroid", {id=hero} )
-	end
-
-	--RequestHonorCosmeticUpdate(player)
-
-	--[[
-	CustomGameEventManager:Send_ServerToPlayer( player, "display_essence", {msg=caster.boss_1_essences} )
-	CustomGameEventManager:Send_ServerToPlayer( player, "display_medal", {msg=caster.medals} )
-
-	local wincon = GameRules.AddonTemplate.win_con
-	if wincon == 1 then
-   		CustomGameEventManager:Send_ServerToPlayer( player, "display_win_con", {mode=wincon, info=killLimit} )
-   	elseif wincon == 2 then
-		CustomGameEventManager:Send_ServerToPlayer( player, "display_win_con", {mode=wincon, info="∞"} )
-	elseif wincon == 3 then
-		local winInfo = _G.RadiantWonDuels .. ":" .. _G.DireWonDuels
-		CustomGameEventManager:Send_ServerToPlayer( player, "display_win_con", {mode=wincon, info=winInfo} )
-	end
-	]]
-end
-
 function BvOReborn:OnRunePickup(keys)
 	local player = PlayerResource:GetPlayer(keys.PlayerID)
 	local rune = keys.rune
@@ -2338,41 +1826,6 @@ function BvOReborn:OnRunePickup(keys)
 	end
 end
 
-function RandomHeroThink()
-	if GameRules:State_Get() >= DOTA_GAMERULES_STATE_HERO_SELECTION then
-		for _,ply in pairs(_G._self.vUserIds) do
-			local pid = ply:GetPlayerID()
-			if PlayerResource:HasRandomed(pid) then
-				if not ply.trySecret then
-					ply.trySecret = true
-					local pool_roll = RandomInt(1, 100)
-					local pool_chance = 10
-					if pool_roll <= pool_chance then
-						local roll = RandomInt(1, #secret_hero_pool)
-						ply.sayRandom = true
-
-						CreateHeroForPlayer(secret_hero_pool[roll], ply)
-						local name = secret_hero_pool[roll]
-						local random_hero = "#bvo_randomed_" .. name
-						GameRules:SendCustomMessage(random_hero, pid, 0)
-						table.remove(secret_hero_pool, roll)
-					end
-				end
-			end
-			if PlayerResource:HasRandomed(pid) and PlayerResource:GetSelectedHeroName(pid) ~= nil then
-				if not ply.sayRandom then
-					ply.sayRandom = true
-					local name = PlayerResource:GetSelectedHeroName(pid)
-					if name ~= nil then
-						local random_hero = "#bvo_randomed_" .. name
-						GameRules:SendCustomMessage(random_hero, pid, 0)
-					end
-				end
-			end
-		end
-	end
-end
-
 function ApplyCooldownReduction( _, event )
     local player = PlayerResource:GetPlayer(event.PlayerID)
     if player == nil then return end
@@ -2381,12 +1834,14 @@ function ApplyCooldownReduction( _, event )
     for _,cdItem in pairs(cd_reduction_items) do
 	    if hero:HasItemInInventory(cdItem) then
 	    	local ability = hero:FindAbilityByName( event.abilityname )
-	    	--reduction
+	    	
+			--reduction
 	    	local item = CreateItem(cdItem, hero, hero)
 			local reduction = item:GetLevelSpecialValueFor("cd_reduction", 0 )
 		    item:RemoveSelf()
 		    reduction = reduction / 100
-	    	--item cd
+	    	
+			--item cd
 	    	if ability == nil then
 	    		for i = 0, 5 do
 		    		local item = hero:GetItemInSlot(i)
@@ -2405,7 +1860,8 @@ function ApplyCooldownReduction( _, event )
 			    	end
 		    	end
 	    	end
-	    	--skill cd
+	    	
+			--skill cd
 		    if ability ~= nil and ability:GetCooldownTimeRemaining() > 0 then
 		        local cdDefault = ability:GetCooldown( ability:GetLevel() - 1 )
 		        local cdReduced = cdDefault * ( 1.0 - reduction )
@@ -2419,19 +1875,6 @@ function ApplyCooldownReduction( _, event )
 		    end
 	    end
 	end
-end
-
-function BvOReborn:OnSurvey(keys)
-	local pid = keys.pID
-	local survey = keys.sID
-	local vote = keys.pVote
-
-	local steam_id = PlayerResource:GetSteamAccountID(pid)
-	local url = BaseAPI .. "ver=" .. StatsCollectionVersion .. "&id=12&steam_id=" .. steam_id .. "&survey=" .. survey .. "&vote=" .. vote
-	local req = CreateHTTPRequest("POST", url)
-	req:Send(function(result)
-		--callback(result.Body)
-	end)
 end
 
 function BvOReborn:BuyCustomItem(keys)
@@ -2716,31 +2159,6 @@ function BvOReborn:OnCustomRandomPick(keys)
 	end
 end
 
-function BvOReborn:OnTokenPick(keys)
-	if GameRules:IsGamePaused() then return end
-
-	local pid = keys.pID
-	local player = PlayerResource:GetPlayer(pid)
-	local thero = keys.thero
-
-	if player:GetAssignedHero() == nil and not PlayerResource:IsHeroSelected(thero) then
-		if player.tokenAmount ~= nil and player.tokenAmount >= 10 then
-			player.tokenAmount = player.tokenAmount - 10
-			CustomGameEventManager:Send_ServerToPlayer(player, "update_tokens", {msg=player.tokenAmount} )
-			CreateHeroForPlayer(thero, player)
-		end
-	end
-end
-
-function BvOReborn:OnCosmeticChange(keys)
-	local pid = keys.pid
-	local ctype = keys.ctype
-	local id = keys.id
-
-	local player = PlayerResource:GetPlayer(pid)
-	player.cosmetics[ctype] = id
-end
-
 const_talents = {
 	"bvo_special_bonus_magic_resist_25",
 	"bvo_special_bonus_armor_15",
@@ -2782,6 +2200,7 @@ end
 function AbandonManager()
 	if GameRules:State_Get() < DOTA_GAMERULES_STATE_GAME_IN_PROGRESS or GameRules:IsGamePaused() then return end
 	if #tHeroesRadiant == 0 or #tHeroesDire == 0 then return end
+	
 	--Count counter up radiant
 	for _,hero in pairs(tHeroesRadiant) do
 		--Check only if not abandoned
@@ -2808,7 +2227,8 @@ function AbandonManager()
 			end
 		end
 	end
-    --Count counter up dire
+    
+	--Count counter up dire
 	for _,hero in pairs(tHeroesDire) do
 		--Check only if not abandoned
 		if hero ~= nil and not hero:IsNull() and not hero.HasAbandoned then
@@ -2834,6 +2254,7 @@ function AbandonManager()
 			end
 		end
 	end
+	
 	--Test for game end condition dire
 	local dire_wins = true
 	for _,hero in pairs(tHeroesRadiant) do
@@ -2847,6 +2268,7 @@ function AbandonManager()
 		end
 	end
 	if dire_wins then SetGameEnd(DOTA_TEAM_BADGUYS) end
+	
 	--Test for game end condition radiant
 	local radiant_wins = true
 	for _,hero in pairs(tHeroesDire) do
@@ -2909,41 +2331,3 @@ function _G:PrintTable(t, indent, done)
         end
     end
 end
-
---[[
--- Lua 5.1+ base64 v3.0 (c) 2009 by Alex Kloss <alexthkloss@web.de>
--- licensed under the terms of the LGPL2
-
--- character table string
-local base64_b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-
--- encoding
-function base64_enc(data)
-    return ((data:gsub('.', function(x) 
-        local r,base64_b='',x:byte()
-        for i=8,1,-1 do r=r..(base64_b%2^i-base64_b%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if (#x < 6) then return '' end
-        local c=0
-        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
-        return base64_b:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
-end
-
--- decoding
-function base64_dec(data)
-    data = string.gsub(data, '[^'..base64_b..'=]', '')
-    return (data:gsub('.', function(x)
-        if (x == '=') then return '' end
-        local r,f='',(base64_b:find(x)-1)
-        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
-        if (#x ~= 8) then return '' end
-        local c=0
-        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
-        return string.char(c)
-    end))
-end
-]]
