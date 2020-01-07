@@ -250,7 +250,7 @@ name_lookup["npc_dota_hero_ursa"] =                 "Akainu"
 name_lookup["npc_dota_hero_enchantress"] =          "Anzu"
 name_lookup["npc_dota_hero_vengefulspirit"] =       "Rem"
 name_lookup["npc_dota_hero_phoenix"] =              "Kiss-Shot Acerola-Orion Heart-Under-Blade"
-name_lookup["npc_dota_hero_dark_willow"] =              "Perona"
+name_lookup["npc_dota_hero_dark_willow"] =          "Perona"
 
 --Model path of hero
 model_lookup = {}
@@ -300,7 +300,7 @@ model_lookup["npc_dota_hero_ursa"] =                        "models/hero_akainu/
 model_lookup["npc_dota_hero_enchantress"] =                 "models/hero_anzu/hero_anzu_base.vmdl"
 model_lookup["npc_dota_hero_vengefulspirit"] =              "models/hero_rem/hero_rem_base.vmdl"
 model_lookup["npc_dota_hero_phoenix"] =                     "models/hero_kissshot/hero_kissshot_base.vmdl"
-model_lookup["npc_dota_hero_dark_willow"] =                     "models/hero_perona/hero_perona_base.vmdl"
+model_lookup["npc_dota_hero_dark_willow"] =                 "models/hero_perona/hero_perona_base.vmdl"
 
 --Primary attribute for hero
 primary_attributes = {}
@@ -348,3 +348,4 @@ primary_attributes["npc_dota_hero_ursa"] =                        0
 primary_attributes["npc_dota_hero_enchantress"] =                 2
 primary_attributes["npc_dota_hero_vengefulspirit"] =              0
 primary_attributes["npc_dota_hero_phoenix"] =                     0
+--npc_dota_hero_dark_willow missing?

@@ -23,12 +23,15 @@ function BvOReborn:InitGameMode()
 
 	--Game mode
 	local GameMode = GameRules:GetGameModeEntity()
+	
 	GameMode:SetFountainPercentageHealthRegen(10)
 	GameMode:SetFountainPercentageManaRegen(10)
 	GameMode:SetFountainConstantManaRegen(75)
-	GameMode:SetUseCustomHeroLevels(true)
+	
 	GameMode:SetCustomXPRequiredToReachNextLevel(XP_PER_LEVEL_TABLE)
-    GameMode:SetBuybackEnabled(false)
+    GameMode:SetUseCustomHeroLevels(true)
+	
+	GameMode:SetBuybackEnabled(false)
 	GameMode:SetCustomHeroMaxLevel(100)
 	GameMode:SetLoseGoldOnDeath(false)
 	

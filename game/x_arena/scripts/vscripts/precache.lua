@@ -136,16 +136,7 @@ particle_precache = {
     "particles/generic_gameplay/rune_haste.vpcf",
     "particles/generic_gameplay/rune_illusion.vpcf",
     "particles/generic_gameplay/rune_invisibility.vpcf",
-    "particles/generic_gameplay/rune_regeneration.vpcf",
-    --cometics
-    --hat
-    "particles/hat/crown_alt.vpcf",
-    "particles/hat/halo.vpcf",
-    --wings
-    "particles/wings/holy_wings.vpcf",
-    --trail
-    "particles/trail/trail_grass.vpcf",
-    "particles/trail/trail_2/trail_holy.vpcf",
+    "particles/generic_gameplay/rune_regeneration.vpcf"
 }
 
 model_precache = {
