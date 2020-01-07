@@ -953,8 +953,9 @@ function BvOReborn:OnHeroLevelUp(keys)
 	
 	-- for k,v in pairs(keys) do print("dota_player_gained_level",k,v) end
     local newLevel = keys.level
-    local playerID = keys.player - 1 -- i guess
-    local heroUnit = PlayerResource:GetSelectedHeroEntity(playerID)
+    local playerEntindex = keys.player
+    local playerUnit = EntIndexToHScript(playerEntindex)
+    local heroUnit = playerUnit:GetAssignedHero()
     if 30==newLevel then
         heroUnit:SetThink(function()
             for i=0,29 do
@@ -972,7 +973,12 @@ function BvOReborn:OnHeroLevelUp(keys)
             end
         end, 0.1)
     end
-	
+    heroUnit.oldLevel = heroUnit.oldLevel or 30
+    if 30<newLevel then
+        local diff = newLevel - heroUnit.oldLevel
+        heroUnit:SetAbilityPoints(heroUnit:GetAbilityPoints()+diff)
+    end
+    heroUnit.oldLevel = newLevel
 end
 
 function BvOReborn:OnHeroPicked(event)
