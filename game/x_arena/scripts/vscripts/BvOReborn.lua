@@ -37,21 +37,21 @@ function BvOReborn:InitGameMode()
 	
 	--Attribute derived values
 	--SetCustomAttributeDerivedStatValue parameter 1: expected integer but got void. Need to fix hp/mp regen
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_STRENGTH_DAMAGE, 1)--1
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_STRENGTH_HP, 20)--20
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_STRENGTH_DAMAGE, 1)--1
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_STRENGTH_HP, 20)--20
 	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_STRENGTH_HP_REGEN_PERCENT, 0.007)--0.007
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_STRENGTH_STATUS_RESISTANCE_PERCENT, 0)--0.0015
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_STRENGTH_STATUS_RESISTANCE_PERCENT, 0)--0.0015
 
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_DAMAGE, 1)--1
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_ARMOR, 0.17)--0.17
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_ATTACK_SPEED, 1)--1
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_MOVE_SPEED_PERCENT, 0)--0.0006
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_DAMAGE, 1)--1
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_ARMOR, 0.17)--0.17
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_ATTACK_SPEED, 1)--1
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_AGILITY_MOVE_SPEED_PERCENT, 0)--0.0006
 
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_DAMAGE, 1)--1
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_MANA, 12)--1
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_DAMAGE, 1)--1
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_MANA, 12)--1
 	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_MANA_REGEN_PERCENT, 0.02)--0.02
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_SPELL_AMP_PERCENT, 0)--0.067
-	GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_MAGIC_RESISTANCE_PERCENT, 0)--0.0015
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_SPELL_AMP_PERCENT, 0)--0.067
+	--GameMode:SetCustomAttributeDerivedStatValue(DOTA_ATTRIBUTE_INTELLIGENCE_MAGIC_RESISTANCE_PERCENT, 0)--0.0015
 
 	--Filters
 	GameMode:SetModifyGoldFilter( 			Dynamic_Wrap( BvOReborn, "FilterGold" ), self )
@@ -950,12 +950,14 @@ function attachCosmetic( keys )
 end
 
 function BvOReborn:OnHeroLevelUp(keys)
-	
 	-- for k,v in pairs(keys) do print("dota_player_gained_level",k,v) end
     local newLevel = keys.level
     local playerEntindex = keys.player
     local playerUnit = EntIndexToHScript(playerEntindex)
     local heroUnit = playerUnit:GetAssignedHero()
+	
+	--[[
+	--Fixed all talents getting skilled on level 30
     if 30==newLevel then
         heroUnit:SetThink(function()
             for i=0,29 do
@@ -973,12 +975,17 @@ function BvOReborn:OnHeroLevelUp(keys)
             end
         end, 0.1)
     end
-    heroUnit.oldLevel = heroUnit.oldLevel or 30
-    if 30<newLevel then
+    ]]--
+	
+	--Fixes not having skill points past level 30
+	heroUnit.oldLevel = heroUnit.oldLevel or 30
+    if 30 < newLevel then
         local diff = newLevel - heroUnit.oldLevel
-        heroUnit:SetAbilityPoints(heroUnit:GetAbilityPoints()+diff)
+        heroUnit:SetAbilityPoints(heroUnit:GetAbilityPoints() + diff)
     end
     heroUnit.oldLevel = newLevel
+	
+	
 end
 
 function BvOReborn:OnHeroPicked(event)
