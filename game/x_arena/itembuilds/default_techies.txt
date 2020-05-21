@@ -9,19 +9,44 @@
         "#DOTA_Item_Build_Starting_Items"
         {
             "item"      "item_shihoins_boots"
-            "item"      "item_sange_and_yasha"
+            "item"      "item_yasha"            
+            "item"      "item_diffusal_blade_custom"
+            "item"      "item_urahara_offering_custom"
+            "item"      "item_linkens_custom"
+            "item"      "item_dragon_lance_custom"
+            "item"      "item_lesser_crit"
+            "item"      "item_bfury_custom"
         }
         
         "#DOTA_Item_Build_Early_Game"
         {   
-            "item"      "item_diffusal_blade_custom"
+            "item"      "item_hermes_boots"
+            "item"      "item_vayus_quiver"
+            "item"      "item_horn_of_mana"
+            "item"      "item_orb_of_lightning"
+            "item"      "item_desolator_custom"
             "item"      "item_butterfly_custom"
             "item"      "item_heart_of_the_bount"
+            "item"      "item_windrunner"
+            "item"      "item_hood_of_kairoseki"
+            "item"      "item_rapier_custom"
+            "item"      "item_mace_of_zeus"
+            "item"      "item_bladebane_armor"
+            "item"      "item_soul_devourer_stone"
         }
         
         "#DOTA_Item_Build_Core_Items"
         {    
-            "item"      "item_horn_of_mana"
+            "item"      "item_vayus_lightning_quiver"
+            "item"      "item_neutral_bow"
+            "item"      "item_killer_axe"
+            "item"      "item_holy_guard"
+            "item"      "item_ancient_staff_of_mythology"
+            "item"      "item_suras_horn"
+            "item"      "item_heatcore"
+            "item"      "item_dragon_lance_custom"
+            "item"      "item_doom_4"
+            "item"      "item_basher"
             "item"      "item_red_butterfly"
             "item"      "item_maximillian"
         }
@@ -30,7 +55,15 @@
         {
             "item"      "item_killer_axe"
             "item"      "item_basher"
-            "item"      "item_bladebane_armor"
+            "item"      "item_ultima_sword"
+            "item"      "item_emperor_maximillian_bladebane_armor"
+            "item"      "item_allerias_sacred_butterfly"
+            "item"      "item_corrupted_desolator"
+            "item"      "item_zanbato"
+            "item"      "item_doom_5"
+            "item"      "item_frostmourne"
+            "item"      "item_blood_sword"
+            "item"      "item_divine_bow"           
         }
     }
 }
